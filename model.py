@@ -62,7 +62,7 @@ class LayerNormalization(nn.Module):
 class FeedForwardBlock(nn.Module):
     
     def __init__(self,d_model: int, d_ff: int, dropout: float):
-        super.__init__()
+        super().__init__()
         self.linear_1 = nn.Linear(d_model,d_ff)  # 512 -> 2048 (W1,B1)
         self.dropout = nn.Dropout(dropout)
         self.linear_2 = nn.Linear(d_ff, d_model)  # 2048 -> 512 (W2,B2)
@@ -75,7 +75,7 @@ class FeedForwardBlock(nn.Module):
 class MultiHeadAttentionBlock(nn.Module):
     
     def __init__(self, d_model: int, h: int, dropout: float):
-        super.__init__()
+        super().__init__()
         self.d_model = d_model
         self.h = h
         
@@ -115,14 +115,14 @@ class MultiHeadAttentionBlock(nn.Module):
         value = self.w_v(v)  # multiplying original matrix v with weights to get value matrix
         
         # (batch,seq_len,d_model) --> (batch, seq_len, h, d_k) --> (batch, h, seq_len, d_k)
-        query = query.veiw(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1,2)
-        key = key.veiw(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1,2)
-        value = value.veiw(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1,2)
+        query = query.view(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1,2)
+        key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1,2)
+        value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1,2)
         
         x, self.attention_score = MultiHeadAttentionBlock.attention(query,key,value,mask,self.dropout)
         
         # (batch, h,seq_len, d_k) --> (batch, seq_len, h, d_k) --> (batch, seq_len, d_model)
-        x= x.transpose(1,2).contiguous().veiw(x.shape[0],-1,self.h*self.d_k)
+        x= x.transpose(1,2).contiguous().view(x.shape[0],-1,self.h*self.d_k)
         
         return self.w_o(x)
     
@@ -131,7 +131,7 @@ class MultiHeadAttentionBlock(nn.Module):
 class ResidualConnection(nn.Module):
     
     def __init__(self, dropout: float):
-        super.__init__()
+        super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNormalization()
         
@@ -142,7 +142,7 @@ class ResidualConnection(nn.Module):
 # ENCOADER BLOCK    
 class EncoderBlock(nn.Module):
     def __init__(self, self_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float):
-        super.__init__()
+        super().__init__()
         self.self_attention_block = self_attention_block
         self.feed_forward_block = feed_forward_block
         self.residual_connection = nn.ModuleList([ResidualConnection(dropout) for _ in range(2)])
@@ -156,7 +156,7 @@ class EncoderBlock(nn.Module):
 class Encoder(nn.Module):
     
     def __init__(self,layer: nn.ModuleList):
-        super.__init__()
+        super().__init__()
         self.layers = layer
         self.norm = LayerNormalization()
         
@@ -170,7 +170,7 @@ class Encoder(nn.Module):
 class DecoaderBlock(nn.Module):
     
     def __init__(self, self_attention_block: MultiHeadAttentionBlock, cross_attention_block:MultiHeadAttentionBlock, feed_forward_block:FeedForwardBlock, dropout: float):
-        super.__init__()
+        super().__init__()
         self.self_attention_block = self_attention_block
         self.cross_attention_block = cross_attention_block
         self.feed_forward_block = feed_forward_block
@@ -186,7 +186,7 @@ class DecoaderBlock(nn.Module):
 class Decoder(nn.Module):
     
     def __init__(self, layers: nn.ModuleList):
-        super.__init__()
+        super().__init__()
         self.layers = layers
         self.norm = LayerNormalization()
         
@@ -201,7 +201,7 @@ class Decoder(nn.Module):
 class ProjectionLayer(nn.Module):
     
     def __init__(self, d_model:int, vocab_size:int):
-        super.__init__()
+        super().__init__()
         self.proj = nn.Linear(d_model,vocab_size)
         
     def forward(self,x):
@@ -225,7 +225,7 @@ class Transformer(nn.Module):
         src = self.src_pos(src)
         return self.encoder(src, src_mask)
     
-    def decode(self, encoder_output, src_mask, tgt_mask):
+    def decode(self, encoder_output: torch.Tensor, src_mask: torch.Tensor, tgt: torch.Tensor, tgt_mask: torch.Tensor):
         tgt = self.tgt_embed(tgt)
         tgt = self.tgt_pos(tgt)
         return self.decoder(tgt, encoder_output, src_mask, tgt_mask)
@@ -271,6 +271,6 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len : in
     
     # Initialization of parameters
     for p in transformer.parameters():
-        if p.dim > 1:
+        if p.dim() > 1:
             nn.init.xavier_uniform_(p)
     return transformer

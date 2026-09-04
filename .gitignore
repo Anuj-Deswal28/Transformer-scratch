@@ -87,3 +87,6 @@ Thumbs.db
 .hydra/
 outputs/
 multirun/
+
+tokenizer_en.json
+tokenizer_it.json
