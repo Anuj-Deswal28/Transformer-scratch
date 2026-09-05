@@ -56,7 +56,7 @@ class LayerNormalization(nn.Module):
     def forward(self,x):
         mean = x.mean(dim=-1, keepdim = True)
         std = x.std(dim=-1, keepdim = True)
-        return self.alpha * x-mean/std + self.eps +self.bias
+        return self.alpha * (x-mean)/(std + self.eps) +self.bias
     
 # FEED-FORWARD LAYER
 class FeedForwardBlock(nn.Module):
@@ -139,7 +139,7 @@ class ResidualConnection(nn.Module):
         return x + self.dropout(sublayer(self.norm(x)))
 
 
-# ENCOADER BLOCK    
+# ENCODER BLOCK    
 class EncoderBlock(nn.Module):
     def __init__(self, self_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float):
         super().__init__()
@@ -152,7 +152,7 @@ class EncoderBlock(nn.Module):
         x = self.residual_connection[1](x, self.feed_forward_block)
         
         return x
-    
+        
 class Encoder(nn.Module):
     
     def __init__(self,layer: nn.ModuleList):
@@ -167,7 +167,7 @@ class Encoder(nn.Module):
         
         
 # DECODER BLOCK
-class DecoaderBlock(nn.Module):
+class DecoderBlock(nn.Module):
     
     def __init__(self, self_attention_block: MultiHeadAttentionBlock, cross_attention_block:MultiHeadAttentionBlock, feed_forward_block:FeedForwardBlock, dropout: float):
         super().__init__()
@@ -178,8 +178,8 @@ class DecoaderBlock(nn.Module):
         
     def forward(self, x, encoder_output, src_mask, target_mask):
         x = self.residual_connection[0](x, lambda x: self.self_attention_block(x,x,x, target_mask))
-        x = self.residual_connection[0](x, lambda x: self.cross_attention_block(x,encoder_output,encoder_output, src_mask))
-        x = self.residual_connection[0](x,self.feed_forward_block)
+        x = self.residual_connection[1](x, lambda x: self.cross_attention_block(x,encoder_output,encoder_output, src_mask))
+        x = self.residual_connection[2](x,self.feed_forward_block)
         return x
     
 # DECODER
@@ -190,9 +190,9 @@ class Decoder(nn.Module):
         self.layers = layers
         self.norm = LayerNormalization()
         
-    def forward(self,x,encoader_output, src_mask, tgt_mask):
+    def forward(self,x,encoder_output, src_mask, tgt_mask):
         for layer in self.layers:
-            x = layer(x, encoader_output, src_mask, tgt_mask)
+            x = layer(x, encoder_output, src_mask, tgt_mask)
             
         return self.norm(x)
     
@@ -245,11 +245,11 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len : in
     # ENCODER
     encoder_blocks =[]
     for _ in range(N):
-        encoader_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
+        encoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
         feed_forward_block = FeedForwardBlock(d_model,d_ff, dropout)
         
-        encoader_block = EncoderBlock(encoader_self_attention_block,feed_forward_block,dropout)
-        encoder_blocks.append(encoader_block)
+        encoder_block = EncoderBlock(encoder_self_attention_block,feed_forward_block,dropout)
+        encoder_blocks.append(encoder_block)
     
     # DECODER
     decoder_blocks =[]
@@ -257,7 +257,7 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len : in
         decoader_self_attention_block = MultiHeadAttentionBlock(d_model,h,dropout)
         decoader_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
         feed_forward_block = FeedForwardBlock(d_model,d_ff, dropout)
-        decoder_block = DecoaderBlock(decoader_self_attention_block,decoader_cross_attention_block,feed_forward_block,dropout)
+        decoder_block = DecoderBlock(decoader_self_attention_block,decoader_cross_attention_block,feed_forward_block,dropout)
         decoder_blocks.append(decoder_block)
         
     # CREATING ENCODER

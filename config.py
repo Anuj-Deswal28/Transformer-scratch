@@ -19,7 +19,7 @@ def get_config():
     
 def get_weigths_file_path(config, epoch: str):
     model_folder = config['model_folder']
-    model_basename = config['model_basename']
+    model_basename = config['model_filename']
     model_filename = f"{model_basename}{epoch}.pt"
     
     return str(Path('.')/model_folder/model_filename)

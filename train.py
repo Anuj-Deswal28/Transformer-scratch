@@ -15,7 +15,7 @@ from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
 
-from dataset import BilingualDataset, casual_mask
+from dataset import BilingualDataset, causal_mask
 from model import build_transformer
 from config import get_weigths_file_path, get_config
 
@@ -33,7 +33,7 @@ def greedy_decode(model, source, source_mask, tokenizer_src,tokenizer_tgt, max_l
             break
         
         # build mask for target
-        decoder_mask = casual_mask(decoder_input.size(1)).type_as(source_mask).to(device)
+        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
         
         # calculate the output of decoder
         out = model.decode(encoder_output, source_mask,decoder_input,decoder_mask)
@@ -178,12 +178,13 @@ def train_model(config):
     if config['preload']:
         model_filename = get_weigths_file_path(config, config['preload'])
         print(f'Preloading model {model_filename}')
-        state = torch.load(model_filename)
+        state = torch.load(model_filename, map_location=device, weights_only=False)
+        model.load_state_dict(state['model_state_dict'])
         initial_epoch = state['epoch'] + 1
         optimizer.load_state_dict(state['optimizer_state_dict'])
         global_step = state['global_step']
         
-    loss_fn = nn.CrossEntropyLoss(ignore_index= tokenizer_src.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index= tokenizer_tgt.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
     
     for epoch in range (initial_epoch, config['num_epochs']):
         

@@ -9,7 +9,7 @@ class BilingualDataset(Dataset):
         
         self.ds = ds
         self.tokenizer_src = tokenizer_src
-        self.tokrnizer_tgt = tokenizer_tgt
+        self.tokenizer_tgt = tokenizer_tgt
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
         self.seq_len = seq_len
@@ -74,6 +74,6 @@ class BilingualDataset(Dataset):
             "tgt_text": tgt_text
         }
         
-def casual_mask(size):
+def causal_mask(size):
     mask = torch.triu(torch.ones(1,size,size), diagonal=1).type(torch.int)
     return mask == 0
